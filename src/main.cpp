@@ -1,5 +1,7 @@
 #include <Arduino.h>
 #include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
 
 //=====================================
 // Pin Definitions
@@ -11,10 +13,13 @@
 #define PIR_PIN 19     // PIR: Sensor de movimento
 #define LDR_PIN 34     // LDR: Sensor de luminosidade (ADC)
 
-// Atuadores e Indicadores
-#define PUMP_PIN 25    // Simulação: Controle da bomba de irrigação
-#define ALARM_PIN 26   // Simulação: Alarme de segurança
-#define LED_PIN 27     // LED de status do sistema
+// Atuadores
+#define BUZZER_PIN 4   // Buzzer para alarme
+#define RELAY_PIN 26   // Relé para bomba d'água
+
+// I2C Pins (LCD)
+#define SDA_PIN 21     // Serial Data
+#define SCL_PIN 23     // Serial Clock
 
 //=====================================
 // Configurações do Sistema
@@ -22,6 +27,16 @@
 #define DHT_TYPE DHT22         // Modelo do sensor DHT
 #define SERIAL_BAUD 115200     // Velocidade da comunicação serial
 #define DELAY_MS 2000          // Intervalo entre leituras (2 segundos)
+#define LCD_ADDR 0x27          // Endereço I2C do LCD
+#define LCD_COLS 16            // Número de colunas do LCD
+#define LCD_ROWS 2             // Número de linhas do LCD
+
+// Configurações do Buzzer
+#define BUZZER_FREQ 2000      // Frequência do som (2KHz)
+#define BUZZER_CHANNEL 0      // Canal PWM para o buzzer
+#define BEEP_DURATION 100     // Duração de cada beep (ms)
+#define BEEP_INTERVAL 100     // Intervalo entre beeps (ms)
+#define NUM_BEEPS 3           // Número de beeps no alerta
 
 //=====================================
 // Thresholds (Limites) do Sistema
@@ -41,22 +56,18 @@
 // Inicialização do sensor DHT
 DHT dht(DHT_PIN, DHT_TYPE);
 
+// Inicialização do LCD
+LiquidCrystal_I2C lcd(LCD_ADDR, LCD_COLS, LCD_ROWS);
+
 // Estados do sistema
-bool isPumpActive = false;     // Estado da bomba de irrigação
+bool isPumpActive = false;     // Estado da bomba
 bool isAlarmActive = false;    // Estado do alarme
 unsigned long lastAlarmTrigger = 0;  // Último disparo do alarme
-const unsigned long ALARM_COOLDOWN = 30000; // Tempo de espera entre alarmes (30s)
+const unsigned long ALARM_COOLDOWN = 3000; // Tempo entre alarmes (30s)
 
 // Variáveis do sensor ultrassônico
 long duration;  // Duração do pulso ultrassônico
 float distance; // Distância calculada
-
-//=====================================
-// Declaração de Funções
-//=====================================
-void controlIrrigation(float temperature, float humidity, float waterLevel, float lightLevel);
-void handleSecurity(bool motionDetected);
-void updateStatusLED();
 
 //=====================================
 // Configuração Inicial
@@ -66,39 +77,91 @@ void setup() {
   Serial.begin(SERIAL_BAUD);
   Serial.println("\nIniciando Sistema de Monitoramento...");
 
+  // Inicializa I2C para LCD
+  Wire.begin(SDA_PIN, SCL_PIN);
+  
+  // Inicializa LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.clear();
+  lcd.print("Iniciando...");
+  
   // Inicializa sensor DHT22
   dht.begin();
   
-  // Configura pinos dos sensores e atuadores
+  // Configura pinos
   pinMode(TRIG_PIN, OUTPUT);   // Trigger do HC-SR04
   pinMode(ECHO_PIN, INPUT);    // Echo do HC-SR04
   pinMode(PIR_PIN, INPUT);     // Entrada do sensor PIR
-  pinMode(PUMP_PIN, OUTPUT);   // Controle da bomba
-  pinMode(ALARM_PIN, OUTPUT);  // Controle do alarme
-  pinMode(LED_PIN, OUTPUT);    // LED de status
+  pinMode(BUZZER_PIN, OUTPUT); // Saída do buzzer
+  pinMode(RELAY_PIN, OUTPUT);  // Saída do relé
   
-  // Define estados iniciais dos atuadores
-  digitalWrite(PUMP_PIN, LOW);   // Bomba desligada
-  digitalWrite(ALARM_PIN, LOW);  // Alarme desligado
-  digitalWrite(LED_PIN, LOW);    // LED desligado
+  // Estados iniciais
+  digitalWrite(BUZZER_PIN, LOW);
+  digitalWrite(RELAY_PIN, LOW);
+  
+  // Configura canal do buzzer
+  ledcSetup(BUZZER_CHANNEL, BUZZER_FREQ, 8); // Canal 0, 2000 Hz, 8-bit resolução
+  ledcAttachPin(BUZZER_PIN, BUZZER_CHANNEL);
   
   // Aguarda estabilização dos sensores
   Serial.println("Aguardando estabilização dos sensores...");
-  delay(5000);  // 5 segundos de delay inicial
+  delay(5000);
+  lcd.clear();
+  lcd.print("Sistema Pronto!");
   Serial.println("Sistema Inicializado!");
 }
 
 //=====================================
-// Controle de Irrigação
+// Funções do LCD
 //=====================================
-void controlIrrigation(float temperature, float humidity, float waterLevel, float lightLevel) {
+void updateLCD(float temp, float hum, float water, bool motion) {
+  lcd.clear();
+  
+  // Primeira linha: Temperatura e Umidade
+  lcd.setCursor(0, 0);
+  lcd.printf("T:%.1fC U:%.1f%%", temp, hum);
+  
+  // Segunda linha: Estado do sistema
+  lcd.setCursor(0, 1);
+  if (isAlarmActive) {
+    lcd.print("ALERTA-MOVIMENTO!");
+  } else if (isPumpActive) {
+    lcd.print("IRRIGANDO...");
+  } else {
+    lcd.printf("Agua:%.0fcm", water);
+  }
+}
+
+//=====================================
+// Controle de Atuadores
+//=====================================
+void soundBuzzer() {
+  // Padrão de beep usando tone
+  for (int i = 0; i < NUM_BEEPS; i++) {
+    ledcWriteTone(BUZZER_CHANNEL, BUZZER_FREQ); // Inicia o tom
+    delay(BEEP_DURATION);
+    ledcWriteTone(BUZZER_CHANNEL, 0);           // Para o tom
+    delay(BEEP_INTERVAL);
+  }
+}
+
+void controlPump(bool active) {
+  digitalWrite(RELAY_PIN, active);
+  isPumpActive = active;
+}
+
+//=====================================
+// Sistema de Irrigação
+//=====================================
+void checkIrrigation(float temperature, float humidity, float waterLevel, float lightLevel) {
   bool shouldIrrigate = false;
   String reason = "";
 
   // Verifica se há água suficiente no reservatório
   if (waterLevel < WATER_MIN) {
-    Serial.println("Irrigação bloqueada: Nível de água muito baixo!");
-    isPumpActive = false;
+    Serial.println("ALERTA: Nível de água muito baixo no reservatório!");
+    controlPump(false);
   } else {
     // Verifica temperatura
     if (temperature > TEMP_MAX) {
@@ -112,7 +175,7 @@ void controlIrrigation(float temperature, float humidity, float waterLevel, floa
       reason += "Umidade baixa; ";
     }
     
-    // Verifica luminosidade (irriga menos durante alta luminosidade)
+    // Verifica luminosidade
     if (lightLevel < LIGHT_THRESHOLD) {
       shouldIrrigate = true;
       reason += "Luminosidade adequada; ";
@@ -121,47 +184,29 @@ void controlIrrigation(float temperature, float humidity, float waterLevel, floa
     // Atualiza estado da bomba
     if (shouldIrrigate && !isPumpActive) {
       Serial.println("Iniciando irrigação - Motivo: " + reason);
-      isPumpActive = true;
+      controlPump(true);
     } else if (!shouldIrrigate && isPumpActive) {
       Serial.println("Parando irrigação - Condições normalizadas");
-      isPumpActive = false;
+      controlPump(false);
     }
   }
-  
-  digitalWrite(PUMP_PIN, isPumpActive);
 }
 
 //=====================================
 // Sistema de Segurança
 //=====================================
-void handleSecurity(bool motionDetected) {
+void checkSecurity(bool motionDetected) {
   unsigned long currentMillis = millis();
   
-  // Verifica movimento e tempo desde último alarme
   if (motionDetected && !isAlarmActive && 
       (currentMillis - lastAlarmTrigger > ALARM_COOLDOWN)) {
     Serial.println("ALERTA: Movimento detectado!");
     isAlarmActive = true;
     lastAlarmTrigger = currentMillis;
+    soundBuzzer();  // Ativa o alarme sonoro
   } else if (isAlarmActive && 
              (currentMillis - lastAlarmTrigger > ALARM_COOLDOWN)) {
-    isAlarmActive = false;  // Desativa alarme após cooldown
-  }
-  
-  digitalWrite(ALARM_PIN, isAlarmActive);
-}
-
-//=====================================
-// Indicador de Status
-//=====================================
-void updateStatusLED() {
-  if (isAlarmActive) {
-    digitalWrite(LED_PIN, HIGH);  // LED fixo quando alarme ativo
-  } else if (isPumpActive) {
-    // LED piscando quando bomba ativa
-    digitalWrite(LED_PIN, (millis() / 500) % 2);
-  } else {
-    digitalWrite(LED_PIN, LOW);   // LED desligado em estado normal
+    isAlarmActive = false;
   }
 }
 
@@ -191,16 +236,13 @@ void readDHT() {
 
 // Leitura do HC-SR04
 float readUltrasonic() {
-  // Gera pulso de trigger
   digitalWrite(TRIG_PIN, LOW);
   delayMicroseconds(2);
   digitalWrite(TRIG_PIN, HIGH);
   delayMicroseconds(10);
   digitalWrite(TRIG_PIN, LOW);
   
-  // Lê o tempo de retorno do eco
   duration = pulseIn(ECHO_PIN, HIGH);
-  // Calcula distância (velocidade do som / 2)
   distance = duration * 0.034 / 2;
 
   Serial.println("\n=== HC-SR04 Reading ===");
@@ -224,9 +266,7 @@ bool readPIR() {
 
 // Leitura do LDR
 float readLDR() {
-  // Lê valor analógico (0-4095 para ESP32)
   int ldrValue = analogRead(LDR_PIN);
-  // Converte para porcentagem
   float percentage = (ldrValue / 4095.0) * 100;
   
   Serial.println("\n=== LDR Sensor Reading ===");
@@ -255,10 +295,14 @@ void loop() {
   
   // Processa lógica de automação
   if (!isnan(humidity) && !isnan(temperature)) {
-    controlIrrigation(temperature, humidity, waterLevel, lightLevel);
+    checkIrrigation(temperature, humidity, waterLevel, lightLevel);
   }
-  handleSecurity(motionDetected);
-  updateStatusLED();
+  checkSecurity(motionDetected);
+  
+  // Atualiza LCD
+  if (!isnan(humidity) && !isnan(temperature)) {
+    updateLCD(temperature, humidity, waterLevel, motionDetected);
+  }
   
   // Imprime estado do sistema
   Serial.println("\n=== System Status ===");
@@ -268,5 +312,5 @@ void loop() {
   Serial.println(isAlarmActive ? "ATIVADO" : "DESATIVADO");
   
   Serial.println("============================");
-  delay(DELAY_MS);  // Aguarda antes da próxima leitura
+  delay(DELAY_MS);
 }
