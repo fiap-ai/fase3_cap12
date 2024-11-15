@@ -1,5 +1,89 @@
 # Procedimentos de Teste - Sistema de Monitoramento Agrícola
 
+## Como Executar os Testes
+
+### Pré-requisitos
+
+1. Instalação do PlatformIO CLI:
+
+**macOS (usando Homebrew):**
+```bash
+brew install platformio
+```
+
+**Linux:**
+```bash
+python3 -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
+```
+
+**Windows:**
+```bash
+python -c "$(curl -fsSL https://raw.githubusercontent.com/platformio/platformio/master/scripts/get-platformio.py)"
+```
+
+Ou instale o VS Code com a extensão PlatformIO IDE.
+
+2. Dependências do Projeto:
+- ESP32 toolchain (instalado automaticamente pelo PlatformIO)
+- Unity framework (incluído nas dependências do projeto)
+
+### Verificando a Instalação
+```bash
+# Verificar se PlatformIO CLI está instalado
+pio --version
+
+# Verificar ambiente
+pio system info
+```
+
+### Comandos para Execução
+```bash
+# Compilar e executar todos os testes
+pio test
+
+# Executar testes específicos
+pio test -f test_dht22_reading_range
+pio test -f test_ultrasonic_reading_range
+pio test -f test_pir_initial_state
+pio test -f test_ldr_reading_range
+
+# Executar testes com saída detalhada
+pio test -v
+
+# Executar testes em um ambiente específico
+pio test -e test
+```
+
+### Ambiente de Teste
+O ambiente de teste está configurado no `platformio.ini`:
+```ini
+[env:test]
+platform = espressif32
+board = esp32doit-devkit-v1
+framework = arduino
+lib_deps = 
+    adafruit/Adafruit Unified Sensor
+    adafruit/DHT sensor library
+    marcoschwartz/LiquidCrystal_I2C
+    throwtheswitch/Unity
+test_build_src = yes
+build_flags = -D UNITY_INCLUDE_DOUBLE
+test_filter = test_*
+test_ignore = test/output
+```
+
+### Estrutura dos Testes
+Os testes estão organizados em:
+1. Testes Unitários (por componente)
+2. Testes de Integração
+3. Validações de Sistema
+
+### Interpretando os Resultados
+- ✓ (check): Teste passou
+- ✕ (x): Teste falhou
+- Detalhes de falha são exibidos no console
+- Logs incluem valores esperados vs. obtidos
+
 ## 1. Testes Unitários
 
 ### 1.1 DHT22

@@ -1,34 +1,14 @@
 #include <unity.h>
-#include <Arduino.h>
-#include <DHT.h>
-#include <Wire.h>
-#include <LiquidCrystal_I2C.h>
+#include "sensors.h"
 
-// Pin Definitions (same as main.cpp)
-#define DHT_PIN 22
-#define TRIG_PIN 5
-#define ECHO_PIN 18
-#define PIR_PIN 19
-#define LDR_PIN 34
-#define BUZZER_PIN 4
-#define RELAY_PIN 26
-
-// Constants
-#define DHT_TYPE DHT22
-#define WATER_MIN 50.0
-#define WATER_MAX 200.0
-#define TEMP_MAX 30.0
-#define HUMIDITY_MIN 40.0
-#define LIGHT_THRESHOLD 60.0
-
-// Global objects
-DHT dht(DHT_PIN, DHT_TYPE);
-LiquidCrystal_I2C lcd(0x27, 16, 2);
+// Test-specific instances
+static DHT test_dht(DHT_PIN, DHT_TYPE);
+static LiquidCrystal_I2C test_lcd(0x27, 16, 2);
 
 void setUp(void) {
-    // Set up hardware
+    // Set up hardware for tests
     Wire.begin();
-    dht.begin();
+    test_dht.begin();
     
     // Configure pins
     pinMode(TRIG_PIN, OUTPUT);
@@ -43,15 +23,15 @@ void setUp(void) {
 }
 
 void tearDown(void) {
-    // Clean up
+    // Clean up after tests
     digitalWrite(BUZZER_PIN, LOW);
     digitalWrite(RELAY_PIN, LOW);
 }
 
 // DHT22 Tests
 void test_dht22_reading_range(void) {
-    float temp = dht.readTemperature();
-    float hum = dht.readHumidity();
+    float temp = test_dht.readTemperature();
+    float hum = test_dht.readHumidity();
     
     // Check if readings are within valid ranges
     TEST_ASSERT_TRUE(!isnan(temp));
@@ -61,17 +41,6 @@ void test_dht22_reading_range(void) {
 }
 
 // HC-SR04 Tests
-float readUltrasonic() {
-    digitalWrite(TRIG_PIN, LOW);
-    delayMicroseconds(2);
-    digitalWrite(TRIG_PIN, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(TRIG_PIN, LOW);
-    
-    long duration = pulseIn(ECHO_PIN, HIGH);
-    return duration * 0.034 / 2;
-}
-
 void test_ultrasonic_reading_range(void) {
     float distance = readUltrasonic();
     TEST_ASSERT_FLOAT_WITHIN(400.0, distance, 2.0);  // 2 to 400cm range
@@ -114,10 +83,10 @@ void test_relay_operation(void) {
 
 // LCD Tests
 void test_lcd_initialization(void) {
-    lcd.init();
-    lcd.backlight();
-    lcd.clear();
-    lcd.print("Test");
+    test_lcd.init();
+    test_lcd.backlight();
+    test_lcd.clear();
+    test_lcd.print("Test");
     TEST_PASS();
 }
 

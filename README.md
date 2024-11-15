@@ -71,23 +71,54 @@ Esta lógica foi implementada para:
 - Prevenir desperdícios
 - Manter segurança da área
 
-## 📁 Estrutura de pastas
+## 📁 Estrutura de Arquivos
 
-- <b>src</b>: Código-fonte do projeto
-  - <b>main.cpp</b>: Implementação principal do sistema
+```
+fase3_cap12/
+├── src/
+│   ├── main.cpp          # Programa principal
+│   └── sensors.cpp       # Implementação dos sensores
+├── include/
+│   └── sensors.h         # Definições e constantes
+├── test/
+│   └── test_sensors.cpp  # Testes unitários
+├── docs/
+│   ├── README.md         # Documentação geral
+│   ├── TECHNICAL.md      # Especificações técnicas
+│   ├── TESTING.md        # Documentação de testes
+│   └── CIRCUIT.md        # Documentação do circuito
+├── diagram.json          # Configuração do Wokwi
+├── platformio.ini        # Configuração do PlatformIO
+└── README.md            # Este arquivo
+```
 
-- <b>include</b>: Arquivos de cabeçalho
+### Arquivos Principais:
 
-- <b>lib</b>: Bibliotecas do projeto
+1. **src/main.cpp**:
+   - Programa principal
+   - Lógica de automação
+   - Interface LCD
+   - Sistema de alertas
 
-- <b>docs</b>: Documentação
-  - <b>README.md</b>: Documentação geral
-  - <b>TECHNICAL.md</b>: Especificações técnicas
-  - <b>TESTING.md</b>: Procedimentos e resultados de testes
-  - <b>CIRCUIT.md</b>: Documentação do circuito
+2. **src/sensors.cpp**:
+   - Implementação dos sensores
+   - Funções de leitura
+   - Processamento de dados
 
-- <b>test</b>: Testes unitários
-  - <b>test_sensors.cpp</b>: Testes dos sensores e atuadores
+3. **include/sensors.h**:
+   - Definições de pinos
+   - Constantes do sistema
+   - Declarações de funções
+
+4. **test/test_sensors.cpp**:
+   - Testes unitários
+   - Validações de componentes
+   - Testes de integração
+
+5. **docs/**:
+   - Documentação completa
+   - Guias técnicos
+   - Procedimentos de teste
 
 ## 💻 Funcionalidades
 
