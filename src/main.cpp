@@ -1,4 +1,32 @@
-#include "sensors.h"
+#include <Arduino.h>
+#include <DHT.h>
+#include <Wire.h>
+#include <LiquidCrystal_I2C.h>
+
+//=====================================
+// Pin Definitions
+//=====================================
+#define DHT_PIN 22     // DHT22: Sensor de temperatura e umidade
+#define TRIG_PIN 5     // HC-SR04: Trigger do sensor ultrassônico
+#define ECHO_PIN 18    // HC-SR04: Echo do sensor ultrassônico
+#define PIR_PIN 19     // PIR: Sensor de movimento
+#define LDR_PIN 34     // LDR: Sensor de luminosidade (ADC)
+#define BUZZER_PIN 4   // Buzzer para alarme
+#define RELAY_PIN 26   // Relé para bomba d'água
+
+// I2C Pins
+#define SDA_PIN 21     // Serial Data
+#define SCL_PIN 23     // Serial Clock
+
+//=====================================
+// Constants
+//=====================================
+#define DHT_TYPE DHT22         // Modelo do sensor DHT
+#define WATER_MIN 50.0         // Nível mínimo de água (cm)
+#define TEMP_MAX 25.0          // Temperatura máxima (°C)
+#define HUMIDITY_MIN 40.0      // Umidade mínima (%)
+#define HUMIDITY_MAX 80.0      // Umidade máxima (%)
+#define LIGHT_THRESHOLD 20.0   // Threshold de luz (%) - Abaixo: escuro, Acima: claro
 
 //=====================================
 // Instâncias Globais
@@ -18,6 +46,36 @@ static const unsigned long ALARM_COOLDOWN = 10000; // 10 segundos entre alarmes
 
 // Armazena o motivo da não irrigação
 static String irrigationStatus = "";
+
+//=====================================
+// Configuração do Buzzer
+//=====================================
+#define BUZZER_FREQ 2000      // Frequência do buzzer em Hz
+#define BUZZER_DUTY 128       // 50% duty cycle (0-255)
+#define BUZZER_RESOLUTION 8   // Resolução em bits
+
+//=====================================
+// Funções dos Sensores
+//=====================================
+float readUltrasonic() {
+    digitalWrite(TRIG_PIN, LOW);
+    delayMicroseconds(2);
+    digitalWrite(TRIG_PIN, HIGH);
+    delayMicroseconds(10);
+    digitalWrite(TRIG_PIN, LOW);
+    
+    long duration = pulseIn(ECHO_PIN, HIGH);
+    return duration * 0.034 / 2;
+}
+
+bool readPIR() {
+    return digitalRead(PIR_PIN);
+}
+
+float readLDR() {
+    int ldrValue = analogRead(LDR_PIN);
+    return (ldrValue / 4095.0) * 100;
+}
 
 //=====================================
 // Inicialização I2C e LCD
@@ -65,10 +123,10 @@ void updateLCD(float temp, float hum, float water, bool motion) {
 void soundBuzzer() {
     // Padrão de 3 beeps para alerta
     for (int i = 0; i < 3; i++) {
-        ledcWriteTone(0, 2000);  // Tom de 2kHz
-        delay(100);              // Duração do beep
-        ledcWriteTone(0, 0);     // Silêncio
-        delay(100);              // Intervalo entre beeps
+        tone(BUZZER_PIN, BUZZER_FREQ);  // Tom de 2kHz
+        delay(100);                      // Duração do beep
+        noTone(BUZZER_PIN);             // Silêncio
+        delay(100);                      // Intervalo entre beeps
     }
 }
 
@@ -246,10 +304,6 @@ void setup() {
     pinMode(PIR_PIN, INPUT);     // Entrada do PIR
     pinMode(BUZZER_PIN, OUTPUT); // Saída do buzzer
     pinMode(RELAY_PIN, OUTPUT);  // Controle do relé
-    
-    // Configura PWM para o buzzer
-    ledcSetup(0, 2000, 8);      // Canal 0, 2kHz, 8-bit
-    ledcAttachPin(BUZZER_PIN, 0);
     
     // Estados iniciais
     digitalWrite(RELAY_PIN, LOW);
