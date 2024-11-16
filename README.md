@@ -35,34 +35,34 @@ O sistema automaticamente controla a irrigação através de um relé e fornece 
 O sistema utiliza os seguintes parâmetros para controle:
 
 1. Condições de Temperatura e Umidade (DHT22):
-   - Temperatura máxima: 30°C
+   - Temperatura máxima: 25°C
    - Umidade mínima: 40%
+   - Umidade máxima: 80%
    - Justificativa: Mantém condições ideais para cultivo
 
 2. Nível de Água (HC-SR04):
    - Nível mínimo: 50cm
-   - Nível máximo: 200cm
    - Justificativa: Garante disponibilidade de água para irrigação
 
 3. Luminosidade (LDR):
-   - Threshold: 60%
-   - Justificativa: Otimiza irrigação baseado na luz solar
+   - Threshold: 20%
+   - Justificativa: Não irriga no escuro para otimizar recursos
 
 4. Segurança (PIR):
-   - Cooldown: 30 segundos
+   - Cooldown: 10 segundos
    - Justificativa: Evita falsos positivos mantendo segurança
 
 ### Lógica de Automação
 
-O sistema ativa a irrigação quando as seguintes condições são atendidas:
+O sistema ativa a irrigação quando TODAS as seguintes condições são atendidas:
 
 1. Condições Ambientais:
-   - Temperatura acima do máximo OU
-   - Umidade abaixo do mínimo
-   - Luminosidade adequada
+   - (Temperatura acima de 25°C OU Umidade abaixo de 40%) E
+   - Umidade não está acima de 80% E
+   - Luminosidade acima de 20% (não irriga no escuro)
 
 2. Condições de Segurança:
-   - Nível de água acima do mínimo
+   - Nível de água acima do mínimo (50cm)
    - Sem detecção de movimento
 
 Esta lógica foi implementada para:
@@ -76,10 +76,7 @@ Esta lógica foi implementada para:
 ```
 fase3_cap12/
 ├── src/
-│   ├── main.cpp          # Programa principal
-│   └── sensors.cpp       # Implementação dos sensores
-├── include/
-│   └── sensors.h         # Definições e constantes
+│   └── main.cpp          # Programa principal com toda implementação
 ├── test/
 │   └── test_sensors.cpp  # Testes unitários
 ├── docs/
@@ -96,29 +93,48 @@ fase3_cap12/
 
 1. **src/main.cpp**:
    - Programa principal
+   - Definições e constantes
    - Lógica de automação
    - Interface LCD
    - Sistema de alertas
-
-2. **src/sensors.cpp**:
    - Implementação dos sensores
    - Funções de leitura
    - Processamento de dados
 
-3. **include/sensors.h**:
-   - Definições de pinos
-   - Constantes do sistema
-   - Declarações de funções
-
-4. **test/test_sensors.cpp**:
+2. **test/test_sensors.cpp**:
    - Testes unitários
    - Validações de componentes
    - Testes de integração
 
-5. **docs/**:
-   - Documentação completa
-   - Guias técnicos
-   - Procedimentos de teste
+3. **docs/**:
+   - **README.md**: Documentação geral do projeto
+     * Visão geral do sistema
+     * Parâmetros de controle
+     * Lógica de automação
+     * Estrutura do projeto
+     * Funcionalidades implementadas
+   
+   - **TECHNICAL.md**: Especificações técnicas detalhadas
+     * Especificações dos sensores e atuadores
+     * Pinagem e conexões
+     * Protocolos de comunicação
+     * Thresholds e parâmetros
+     * Fluxo de operação
+     * Tratamento de erros
+   
+   - **TESTING.md**: Documentação de testes
+     * Instruções de instalação do ambiente
+     * Procedimentos de teste
+     * Testes unitários
+     * Testes de integração
+     * Resultados esperados
+     * Validação de requisitos
+   
+   - **CIRCUIT.md**: Documentação do circuito
+     * Diagrama de conexões
+     * Lista de componentes
+     * Especificações elétricas
+     * Considerações de montagem
 
 ## 💻 Funcionalidades
 
@@ -133,14 +149,20 @@ O sistema oferece monitoramento contínuo com:
 ### Interface e Feedback
 
 1. Display LCD:
-- Temperatura e umidade atual
-- Estado do sistema
-- Alertas ativos
+- Linha 1: Temperatura e umidade atual
+- Linha 2: Estado do sistema ou motivo da não irrigação:
+  * "IRRIGANDO..." quando sistema ativo
+  * "ALERTA-MOVIMENTO!" quando detectado movimento
+  * "Escuro demais!" quando pouca luz
+  * "Umidade alta!" quando umidade > 80%
+  * "Agua baixa!" quando nível < 50cm
+  * "Aguardando..." em condições normais
+  * "Agua:XXXcm" mostrando nível de água
 
 2. Alarmes:
 - Buzzer para alertas de segurança
 - Padrão de 3 beeps para alertas
-- Cooldown entre alertas
+- Cooldown de 10s entre alertas
 
 ### Formato dos Dados (Serial)
 
