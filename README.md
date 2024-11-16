@@ -30,6 +30,12 @@ O sistema realiza o monitoramento em tempo real das seguintes variáveis:
 
 O sistema automaticamente controla a irrigação através de um relé e fornece alertas de segurança através de um buzzer, baseado nas leituras dos sensores.
 
+## 🔌 Circuito
+
+<p align="center">
+<img src="assets/circuit.png" alt="Diagrama do Circuito" width="800">
+</p>
+
 ### Parâmetros de Controle
 
 O sistema utiliza os seguintes parâmetros para controle:
