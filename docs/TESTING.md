@@ -95,8 +95,9 @@ Os testes estão organizados em:
   ```
   Umidade: 40.00% (OK)
   ```
-- [x] Validação de dados inválidos
+- [x] Validação de dados inválidos (isnan)
 - [x] Resposta a diferentes condições
+- [x] Limites de umidade (40-80%)
 
 ### 1.2 HC-SR04
 - [x] Medição de distância
@@ -105,6 +106,7 @@ Os testes estão organizados em:
   ```
 - [x] Precisão das leituras
 - [x] Estabilidade do sensor
+- [x] Nível mínimo de água (50cm)
 
 ### 1.3 PIR
 - [x] Detecção de movimento
@@ -112,7 +114,7 @@ Os testes estão organizados em:
   Movimento Detectado: SIM/NÃO (OK)
   ```
 - [x] Tempo de resposta
-- [x] Cooldown entre detecções
+- [x] Cooldown entre detecções (10s)
 
 ### 1.4 LDR
 - [x] Leitura de luminosidade
@@ -120,28 +122,38 @@ Os testes estão organizados em:
   Valor Raw: 1891
   Percentual de Luz: 46.18% (OK)
   ```
-- [x] Conversão de valores
-- [x] Resposta a mudanças de luz
+- [x] Conversão de valores (0-100%)
+- [x] Threshold de escuridão (20%)
 
 ### 1.5 Buzzer
 - [x] Geração de tom
   ```
   Frequência: 2000Hz
-  Canal PWM: 0
+  Duração: 100ms
   Padrão: 3 beeps
   ```
 - [x] Padrão de beeps
-- [x] Controle PWM
+- [x] Função tone()
 
 ### 1.6 Relé
 - [x] Acionamento
-- [x] Estado inicial
+- [x] Estado inicial (LOW)
 - [x] Controle da bomba
 
 ### 1.7 LCD
 - [x] Inicialização I2C
 - [x] Exibição de caracteres
 - [x] Atualização dinâmica
+- [x] Estados do display:
+  ```
+  - "IRRIGANDO..."
+  - "ALERTA-MOVIMENTO!"
+  - "Escuro demais!"
+  - "Umidade alta!"
+  - "Agua baixa!"
+  - "Aguardando..."
+  - "Agua:XXXcm"
+  ```
 
 ## 2. Testes de Integração
 
@@ -149,13 +161,14 @@ Os testes estão organizados em:
 - [x] Decisão baseada em múltiplos sensores:
   ```
   Condições testadas:
-  - Temperatura > 30°C
-  - Umidade < 40%
+  - Temperatura > 25°C
+  - Umidade < 40% ou > 80%
   - Nível de água > 50cm
-  - Luminosidade < 60%
+  - Luminosidade > 20%
   ```
 - [x] Controle da bomba
 - [x] Feedback no LCD
+- [x] Mensagens de status
 
 ### 2.2 Sistema de Segurança
 - [x] Detecção e alarme
@@ -164,10 +177,11 @@ Os testes estão organizados em:
   1. Detecção de movimento
   2. Ativação do buzzer (3 beeps)
   3. Atualização do LCD
-  4. Cooldown de 30s
+  4. Cooldown de 10s
   ```
 - [x] Padrão sonoro
 - [x] Indicação visual
+- [x] Bloqueio de irrigação
 
 ### 2.3 Interface do Usuário
 - [x] Atualização do LCD
@@ -178,6 +192,7 @@ Os testes estão organizados em:
   ```
 - [x] Logs no Serial
 - [x] Indicadores de estado
+- [x] Mensagens de erro
 
 ## 3. Resultados dos Testes
 
@@ -207,34 +222,38 @@ Percentual de Luz: 46.18%
 === System Status ===
 Bomba de Irrigação: DESLIGADA
 Sistema de Alarme: DESATIVADO
+Status: Aguardando...
 ```
 
 ## 4. Validação de Requisitos
 
 ### 4.1 Funcionais
 - [x] Monitoramento ambiental
-  - Temperatura e umidade
-  - Nível de água
-  - Luminosidade
+  - Temperatura e umidade (com limites)
+  - Nível de água (mínimo)
+  - Luminosidade (threshold)
   - Detecção de movimento
 - [x] Automação
   - Sistema de irrigação
   - Sistema de segurança
+  - Mensagens de status
 - [x] Interface
-  - Display LCD
-  - Logs Serial
+  - Display LCD com estados
+  - Logs Serial detalhados
   - Indicadores sonoros
 
 ### 4.2 Não Funcionais
 - [x] Performance
   - Tempo de resposta < 100ms
-  - Atualização LCD a cada 2s
+  - Atualização LCD a cada 1s
 - [x] Confiabilidade
   - Tratamento de erros
   - Validação de dados
+  - Mensagens claras
 - [x] Usabilidade
   - Interface clara
   - Feedback constante
+  - Status detalhado
 
 ## 5. Conclusão
 
@@ -244,15 +263,18 @@ O sistema foi testado e validado com sucesso, demonstrando:
 - Todos os sensores operando corretamente
 - Atuadores respondendo adequadamente
 - Interface funcionando conforme esperado
+- Mensagens de status claras
 
 2. Integração:
 - Comunicação efetiva entre componentes
 - Lógica de automação funcionando
 - Sistema de alertas ativo
+- Status detalhado no LCD
 
 3. Performance:
 - Tempo de resposta adequado
 - Estabilidade nas leituras
 - Uso eficiente de recursos
+- Feedback em tempo real
 
 O sistema está pronto para uso, atendendo todos os requisitos especificados no projeto.

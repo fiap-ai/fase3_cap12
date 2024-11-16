@@ -34,14 +34,15 @@
 - **Especificações**:
   - Tensão de operação: 3.3V
   - Leitura: ADC 12-bit (0-4095)
+  - Conversão: 0-100%
 - **Função**: Monitoramento de luminosidade
 
 ### 1.5 Buzzer
 - **Pino**: GPIO4
 - **Especificações**:
   - Frequência: 2000Hz
-  - Canal PWM: 0
-  - Resolução: 8-bit
+  - Controle: tone() padrão
+  - Padrão: 3 beeps
 - **Função**: Alarme sonoro
 
 ### 1.6 Relé
@@ -65,37 +66,45 @@
 ### 2.1 Sistema de Irrigação
 ```cpp
 Condições para irrigação:
-- Temperatura > 30°C
-- Umidade < 40%
-- Nível de água > 50cm
-- Luminosidade < 60%
+- (Temperatura > 25°C OU Umidade < 40%) E
+- Umidade não está acima de 80% E
+- Luminosidade > 20% E
+- Nível de água > 50cm E
+- Sem movimento detectado
 ```
 
 ### 2.2 Sistema de Segurança
 ```cpp
 Condições de alarme:
 - Movimento detectado
-- Cooldown: 30 segundos
+- Cooldown: 10 segundos
 - Padrão sonoro: 3 beeps
 ```
 
 ### 2.3 Interface LCD
 ```cpp
 Linha 1: Temperatura e Umidade
-Linha 2: Estado do Sistema ou Alertas
+Linha 2: Estados possíveis:
+- "IRRIGANDO..." (sistema ativo)
+- "ALERTA-MOVIMENTO!" (movimento detectado)
+- "Escuro demais!" (pouca luz)
+- "Umidade alta!" (umidade > 80%)
+- "Agua baixa!" (nível < 50cm)
+- "Aguardando..." (condições normais)
+- "Agua:XXXcm" (nível de água)
 ```
 
 ## 3. Thresholds e Parâmetros
 
 ### 3.1 Limites de Operação
-- Temperatura: 20-30°C
+- Temperatura máxima: 25°C
 - Umidade: 40-80%
-- Nível de água: 50-200cm
-- Luminosidade: < 60%
+- Nível mínimo de água: 50cm
+- Luminosidade: > 20% (não irriga no escuro)
 
 ### 3.2 Temporização
-- Leitura de sensores: 2 segundos
-- Cooldown do alarme: 30 segundos
+- Leitura de sensores: 1 segundo
+- Cooldown do alarme: 10 segundos
 - Duração do beep: 100ms
 - Intervalo entre beeps: 100ms
 
@@ -115,6 +124,7 @@ lib_deps =
 - Baud rate: 115200
 - Formato: ASCII
 - Logs estruturados por seção
+- Status detalhado do sistema
 
 ### 5.2 I2C
 - Frequência: Padrão
@@ -128,34 +138,39 @@ lib_deps =
    - Inicialização de sensores
    - Setup do LCD
    - Configuração do buzzer
+   - Aguarda 5s para estabilização
 
 2. Loop Principal
    - Leitura de sensores
    - Processamento de dados
    - Tomada de decisão
    - Atualização de outputs
-   - Delay de 2 segundos
+   - Delay de 1 segundo
 
 ## 7. Tratamento de Erros
 
 ### 7.1 Verificações
-- Leituras inválidas do DHT22
+- Leituras inválidas do DHT22 (isnan)
 - Nível crítico de água
 - Falhas de comunicação I2C
+- Condições fora dos limites
 
 ### 7.2 Recuperação
-- Retry em falhas de leitura
-- Desativação de irrigação em níveis críticos
+- Desativação de irrigação em condições críticas
 - Mensagens de erro no LCD e Serial
+- Status detalhado no Serial Monitor
+- Indicação visual do motivo da não irrigação
 
 ## 8. Manutenção
 
 ### 8.1 Monitoramento
-- Logs via Serial Monitor
+- Logs detalhados via Serial Monitor
 - Status em tempo real no LCD
 - Indicadores sonoros de estado
+- Mensagens de status claras
 
 ### 8.2 Calibração
 - Thresholds ajustáveis via constantes
 - Parâmetros de temporização configuráveis
 - Padrões de alarme personalizáveis
+- Mensagens de status customizáveis
